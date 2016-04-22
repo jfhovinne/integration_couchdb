@@ -22,12 +22,6 @@ use Drupal\integration\Document\DocumentInterface;
  */
 class CouchdbBackend extends AbstractBackend {
 
-  public function TestClient() {
-    $client = new \GuzzleHttp\Client();
-    $res = $client->request('GET', 'http://localhost:5984/');
-    return $res->getStatusCode();
-  }
-
   /**
    * {@inheritdoc}
    */
@@ -68,6 +62,19 @@ class CouchdbBackend extends AbstractBackend {
    */
   public function getBackendContentId(DocumentInterface $document) {
 
+  }
+
+  /**
+   * Check whether the CouchDB backend can be contacted or not.
+   *
+   * @return bool
+   *    TRUE if contactable, FALSE otherwise.
+   */
+  public function isAlive() {
+    $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
+    $client = new \GuzzleHttp\Client();
+    $res = $client->request('GET', $base_url);
+    return $res->getStatusCode() === 200;
   }
 
 }
