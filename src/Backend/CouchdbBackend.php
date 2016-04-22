@@ -10,6 +10,7 @@ namespace Drupal\integration_couchdb\Backend;
 use Drupal\integration\Backend\AbstractBackend;
 use Drupal\integration\Document\Document;
 use Drupal\integration\Document\DocumentInterface;
+use GuzzleHttp\Client as GuzzleClient;
 
 /**
  * Class CouchdbBackend.
@@ -21,6 +22,20 @@ use Drupal\integration\Document\DocumentInterface;
  * @package Drupal\integration\Backend
  */
 class CouchdbBackend extends AbstractBackend {
+
+  protected $client;
+
+  public function setClient(GuzzleClient $client) {
+    $this->client = $client;
+    return $this;
+  }
+
+  public function getClient() {
+    if (!$this->client) {
+      $this->client = new GuzzleClient(array('defaults' => array('allow_redirects' => false)));
+    }
+    return $this->client;
+  }
 
   /**
    * {@inheritdoc}
@@ -72,9 +87,12 @@ class CouchdbBackend extends AbstractBackend {
    */
   public function isAlive() {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
-    $client = new \GuzzleHttp\Client();
-    $res = $client->request('GET', $base_url);
-    return $res->getStatusCode() === 200;
+    try {
+      $res = $this->getClient()->request('GET', $base_url);
+      return $res->getStatusCode() === 200;
+    } catch (\GuzzleHttp\Exception\RequestException $e) {
+      return FALSE;
+    }
   }
 
 }
