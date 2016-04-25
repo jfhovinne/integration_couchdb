@@ -124,7 +124,23 @@ class CouchdbBackend extends AbstractBackend {
    * {@inheritdoc}
    */
   public function delete($resource_schema, $id) {
+    $this->validateResourceSchema($resource_schema);
 
+    if (!$doc = $this->read($resource_schema, $id)) {
+      return FALSE;
+    }
+    try {
+      $uri = $this->getResourceUri($resource_schema)
+        . "/$id?rev=" . $doc->getMetaData('_rev');
+      $response = $this->getClient()->request('DELETE', $uri);
+      if ($response->getStatusCode() === 200) {
+        return TRUE;
+      } else {
+        return FALSE;
+      }
+    } catch (\GuzzleHttp\Exception\RequestException $e) {
+      return FALSE;
+    }
   }
 
   /**
