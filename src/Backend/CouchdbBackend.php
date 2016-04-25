@@ -33,7 +33,11 @@ class CouchdbBackend extends AbstractBackend {
 
   public function getClient() {
     if (!$this->client) {
-      $this->client = new GuzzleClient(array('defaults' => array('allow_redirects' => false)));
+      $this->client = new GuzzleClient([
+        'headers' => [
+          'content-type' => $this->getFormatterHandler()->getContentType(),
+        ],
+      ]);
     }
     return $this->client;
   }
@@ -52,11 +56,7 @@ class CouchdbBackend extends AbstractBackend {
         $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
         // @todo: Make this uri configurable.
         $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
-        $response = $this->getClient()->request('GET', $uri, [
-          'headers' => [
-            'content-type' => $this->getFormatterHandler()->getContentType(),
-          ],
-        ]);
+        $response = $this->getClient()->request('GET', $uri);
         if ($response->getStatusCode() === 200) {
           $body = (string) $response->getBody();
           $result = $this->getFormatterHandler()->decode($body);
@@ -83,9 +83,6 @@ class CouchdbBackend extends AbstractBackend {
     $document->deleteMetadata('_id');
     try {
       $response = $this->getClient()->request('POST', $uri, [
-        'headers' => [
-          'content-type' => $this->getFormatterHandler()->getContentType(),
-        ],
         'body' => $this->getFormatterHandler()->encode($document),
       ]);
       if ($response->getStatusCode() === 201) {
@@ -107,11 +104,7 @@ class CouchdbBackend extends AbstractBackend {
 
     try {
       $uri = $this->getResourceUri($resource_schema) . "/$id";
-      $response = $this->getClient()->request('GET', $uri, [
-        'headers' => [
-          'content-type' => $this->getFormatterHandler()->getContentType(),
-        ],
-      ]);
+      $response = $this->getClient()->request('GET', $uri);
       if ($response->getStatusCode() === 200) {
         $body = (string) $response->getBody();
         $result = $this->getFormatterHandler()->decode($body);
