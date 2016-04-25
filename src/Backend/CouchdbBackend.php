@@ -50,6 +50,7 @@ class CouchdbBackend extends AbstractBackend {
     } else {
       try {
         $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
+        // @todo: Make this uri configurable.
         $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
         $response = $this->getClient()->request('GET', $uri, [
           'headers' => [
@@ -102,7 +103,25 @@ class CouchdbBackend extends AbstractBackend {
    * {@inheritdoc}
    */
   public function read($resource_schema, $id) {
+    $this->validateResourceSchema($resource_schema);
 
+    try {
+      $uri = $this->getResourceUri($resource_schema) . "/$id";
+      $response = $this->getClient()->request('GET', $uri, [
+        'headers' => [
+          'content-type' => $this->getFormatterHandler()->getContentType(),
+        ],
+      ]);
+      if ($response->getStatusCode() === 200) {
+        $body = (string) $response->getBody();
+        $result = $this->getFormatterHandler()->decode($body);
+        return new Document($this->getFormatterHandler()->decode($body));
+      } else {
+        return FALSE;
+      }
+    } catch (\GuzzleHttp\Exception\RequestException $e) {
+      return FALSE;
+    }
   }
 
   /**
