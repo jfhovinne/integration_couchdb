@@ -24,6 +24,7 @@ use GuzzleHttp\Client as GuzzleClient;
 class CouchdbBackend extends AbstractBackend {
 
   protected $client;
+  protected $limit = 1000;
 
   public function setClient(GuzzleClient $client) {
     $this->client = $client;
@@ -41,13 +42,42 @@ class CouchdbBackend extends AbstractBackend {
    * {@inheritdoc}
    */
   public function find($resource_schema, $args = []) {
+    $this->validateResourceSchema($resource_schema);
 
+    $out = [];
+    if (isset($args['id']) && $this->read($resource_schema, $args['id'])) {
+      $out = [$args['id']];
+    } else {
+      try {
+        $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
+        $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
+        $response = $this->getClient()->request('GET', $uri, [
+          'headers' => [
+            'content-type' => $this->getFormatterHandler()->getContentType(),
+          ],
+        ]);
+        if ($response->getStatusCode() === 200) {
+          $body = (string) $response->getBody();
+          $result = $this->getFormatterHandler()->decode($body);
+          foreach($result->rows as $item) {
+            $out[] = $item->id;
+          }
+        } else {
+          // @todo: Handle this.
+        }
+      } catch (\GuzzleHttp\Exception\RequestException $e) {
+        // @todo: Handle this.
+      }
+    }
+    return $out;
   }
 
   /**
    * {@inheritdoc}
    */
   public function create($resource_schema, DocumentInterface $document) {
+    $this->validateResourceSchema($resource_schema);
+
     $uri = $this->getResourceUri($resource_schema);
     $document->deleteMetadata('_id');
     try {
