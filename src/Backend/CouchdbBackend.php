@@ -58,8 +58,7 @@ class CouchdbBackend extends AbstractBackend {
         $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
         $response = $this->getClient()->request('GET', $uri);
         if ($response->getStatusCode() === 200) {
-          $body = (string) $response->getBody();
-          $result = $this->getFormatterHandler()->decode($body);
+          $result = $this->getResponseData($response);
           foreach($result->rows as $item) {
             $out[] = $item->id;
           }
@@ -86,8 +85,7 @@ class CouchdbBackend extends AbstractBackend {
         'body' => $this->getFormatterHandler()->encode($document),
       ]);
       if ($response->getStatusCode() === 201) {
-        $body = (string) $response->getBody();
-        return new Document($this->getFormatterHandler()->decode($body));
+        return new Document($this->getResponseData($response));
       } else {
         return FALSE;
       }
@@ -106,9 +104,7 @@ class CouchdbBackend extends AbstractBackend {
       $uri = $this->getResourceUri($resource_schema) . "/$id";
       $response = $this->getClient()->request('GET', $uri);
       if ($response->getStatusCode() === 200) {
-        $body = (string) $response->getBody();
-        $result = $this->getFormatterHandler()->decode($body);
-        return new Document($this->getFormatterHandler()->decode($body));
+        return new Document($this->getResponseData($response));
       } else {
         return FALSE;
       }
@@ -167,6 +163,20 @@ class CouchdbBackend extends AbstractBackend {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
     $endpoint = $this->getConfiguration()->getResourceEndpoint($resource_schema);
     return "$base_url/$endpoint";
+  }
+
+  /**
+   * Get response data, decoded by the formatter.
+   *
+   * @param GuzzleHttp\Psr7\Response $response
+   *    A response returned by a request.
+   *
+   * @return mixed
+   *    Decoded response body.
+   */
+  protected function getResponseData($response) {
+    $body = (string) $response->getBody();
+    return $this->getFormatterHandler()->decode($body);
   }
 
 }
