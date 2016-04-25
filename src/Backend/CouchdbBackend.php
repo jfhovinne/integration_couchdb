@@ -48,7 +48,24 @@ class CouchdbBackend extends AbstractBackend {
    * {@inheritdoc}
    */
   public function create($resource_schema, DocumentInterface $document) {
-
+    $uri = $this->getResourceUri($resource_schema);
+    $document->deleteMetadata('_id');
+    try {
+      $response = $this->getClient()->request('POST', $uri, [
+        'headers' => [
+          'content-type' => $this->getFormatterHandler()->getContentType(),
+        ],
+        'body' => $this->getFormatterHandler()->encode($document),
+      ]);
+      if ($response->getStatusCode() === 201) {
+        $body = (string) $response->getBody();
+        return new Document($this->getFormatterHandler()->decode($body));
+      } else {
+        return FALSE;
+      }
+    } catch (\GuzzleHttp\Exception\RequestException $e) {
+      return FALSE;
+    }
   }
 
   /**
@@ -88,11 +105,26 @@ class CouchdbBackend extends AbstractBackend {
   public function isAlive() {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
     try {
-      $res = $this->getClient()->request('GET', $base_url);
-      return $res->getStatusCode() === 200;
+      $response = $this->getClient()->request('GET', $base_url);
+      return $response->getStatusCode() === 200;
     } catch (\GuzzleHttp\Exception\RequestException $e) {
       return FALSE;
     }
+  }
+
+  /**
+   * Get full, single resource URI.
+   *
+   * @param string $resource_schema
+   *    Machine name of a resource schema configuration object.
+   *
+   * @return string
+   *    Single resource URI.
+   */
+  protected function getResourceUri($resource_schema) {
+    $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
+    $endpoint = $this->getConfiguration()->getResourceEndpoint($resource_schema);
+    return "$base_url/$endpoint";
   }
 
 }
