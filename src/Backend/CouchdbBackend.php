@@ -85,7 +85,11 @@ class CouchdbBackend extends AbstractBackend {
         'body' => $this->getFormatterHandler()->encode($document),
       ]);
       if ($response->getStatusCode() === 201) {
-        return new Document($this->getResponseData($response));
+        $data = $this->getResponseData($response);
+        $doc = new \stdClass();
+        $doc->_id = $data->id;
+        $doc->_rev = $data->rev;
+        return new Document($doc);
       } else {
         return FALSE;
       }
