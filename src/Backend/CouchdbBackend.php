@@ -24,6 +24,7 @@ use GuzzleHttp\Client as GuzzleClient;
 class CouchdbBackend extends AbstractBackend {
 
   protected $client;
+  protected $cookies;
   protected $limit = 1000;
 
   public function setClient(GuzzleClient $client) {
@@ -33,10 +34,26 @@ class CouchdbBackend extends AbstractBackend {
 
   public function getClient() {
     if (!$this->client) {
+      $configuration = $this->getConfiguration();
+      $headers = ['Content-Type' => $this->getFormatterHandler()->getContentType()];
+      switch ($configuration->authentication) {
+        case 'http_authentication':
+          // Use basic auth and add username/password in the request headers.
+          $username = $configuration->getComponentSetting('authentication_handler', 'username');
+          $password = $configuration->getComponentSetting('authentication_handler', 'password');
+          $headers['auth'] = ["$username", "$password"];
+        break;
+        case 'cookie_authentication':
+          // Use cookie authentication, see CookieAuthentication class.
+          $authentication = $this->getAuthenticationHandler();
+          $authentication->authenticate();
+          $context = $authentication->getContext();
+          $this->cookies = $context['cookies'];
+        break;
+      }
       $this->client = new GuzzleClient([
-        'headers' => [
-          'content-type' => $this->getFormatterHandler()->getContentType(),
-        ],
+        'headers' => $headers,
+        'cookies' => $this->cookies,
       ]);
     }
     return $this->client;
@@ -94,7 +111,7 @@ class CouchdbBackend extends AbstractBackend {
         return FALSE;
       }
     } catch (\GuzzleHttp\Exception\RequestException $e) {
-      return FALSE;
+        return FALSE;
     }
   }
 
@@ -182,7 +199,7 @@ class CouchdbBackend extends AbstractBackend {
   protected function getResourceUri($resource_schema) {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
     $endpoint = $this->getConfiguration()->getResourceEndpoint($resource_schema);
-    return "$base_url/$endpoint";
+    return $base_url . $endpoint;
   }
 
   /**
