@@ -100,6 +100,11 @@ class CouchdbBackend extends AbstractBackend {
 
     $uri = $this->getResourceUri($resource_schema);
     $document->deleteMetadata('_id');
+
+    if ($id = $this->getBackendContentId($document)) {
+      return $this->update($resource_schema, $document);
+    }
+
     try {
       $response = $this->getClient()->request('POST', $uri, [
         'body' => $this->getFormatterHandler()->encode($document),
@@ -141,7 +146,32 @@ class CouchdbBackend extends AbstractBackend {
    * {@inheritdoc}
    */
   public function update($resource_schema, DocumentInterface $document) {
+    $this->validateResourceSchema($resource_schema);
 
+    // Be sure we use the ID coming from the backend, not from the document.
+    $document->deleteMetadata('_id');
+    $id = $this->getBackendContentId($document);
+    // @todo: throw an exception?
+    if (!$doc = $this->read($resource_schema, $id)) {
+      return FALSE;
+    }
+    $uri = $this->getResourceUri($resource_schema) . "/$id";
+    try {
+      $response = $this->getClient()->request('PUT', $uri, [
+        'body' => $this->getFormatterHandler()->encode($document),
+      ]);
+      if ($response->getStatusCode() === 201) {
+        $data = $this->getResponseData($response);
+        $doc = new \stdClass();
+        $doc->_id = $data->id;
+        $doc->_rev = $data->rev;
+        return new Document($doc);
+      } else {
+        return FALSE;
+      }
+    } catch (\GuzzleHttp\Exception\RequestException $e) {
+      return FALSE;
+    }
   }
 
   /**
@@ -171,7 +201,32 @@ class CouchdbBackend extends AbstractBackend {
    * {@inheritdoc}
    */
   public function getBackendContentId(DocumentInterface $document) {
-
+    $producer = $document->getMetadata('producer');
+    $producer_content_id = $document->getMetadata('producer_content_id');
+    if ($producer && $producer_content_id) {
+      $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
+      // @todo: would be good to be able to use tokens within backend.id_endpoint value,
+      // e.g. /getid/{producer}/{entity_id}
+      $id_endpoint = $this->getConfiguration()->getPluginSetting('backend.id_endpoint');
+      $uri = $base_url . $id_endpoint . '/' . $producer . '/' . $producer_content_id;
+      try {
+        $response = $this->getClient()->request('GET', $uri);
+        if ($response->getStatusCode() === 200) {
+          $result = $this->getResponseData($response);
+          // @todo: Should we return the first or last item, or throw an exception
+          // if more than 1 item?
+          if (isset($result->rows[0])) {
+            return $result->rows[0]->id;
+          } else {
+            return FALSE;
+          }
+        } else {
+          return FALSE;
+        }
+      } catch (\GuzzleHttp\Exception\RequestException $e) {
+        return FALSE;
+      }
+    }
   }
 
   /**

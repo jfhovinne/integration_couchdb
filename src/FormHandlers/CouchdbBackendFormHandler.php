@@ -33,6 +33,7 @@ class CouchdbBackendFormHandler extends AbstractBackendFormHandler {
   public function form(array &$form, array &$form_state, $op) {
     $configuration = $this->getConfiguration($form_state);
     $form['base_url'] = FormHelper::textField(t('Base URL'), $configuration->getPluginSetting('backend.base_url'));
+    $form['id_endpoint'] = FormHelper::textField(t('ID endpoint'), $configuration->getPluginSetting('backend.id_endpoint'));
   }
 
   /**
