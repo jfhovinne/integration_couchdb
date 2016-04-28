@@ -46,9 +46,12 @@ class CouchdbBackend extends AbstractBackend {
         case 'cookie_authentication':
           // Use cookie authentication, see CookieAuthentication class.
           $authentication = $this->getAuthenticationHandler();
-          $authentication->authenticate();
-          $context = $authentication->getContext();
-          $this->cookies = $context['cookies'];
+          if ($authentication->authenticate()) {
+            $context = $authentication->getContext();
+            $this->cookies = $context['cookies'];
+          } else {
+            // @todo: Could not authenticate; handle this.
+          }
         break;
       }
       $this->client = new GuzzleClient([
