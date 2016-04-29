@@ -72,8 +72,15 @@ class CouchdbBackend extends AbstractBackend {
     } else {
       try {
         $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
-        // @todo: Make this uri configurable.
-        $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
+        $endpoint = $this->getConfiguration()
+          ->getPluginSetting("resource_schema.$resource_schema.all_docs_endpoint");
+        if ($endpoint) {
+          // Custom endpoint
+          $uri = $this->getConfiguration()->getPluginSetting('backend.base_url') . $endpoint;
+        } else {
+          // Default endpoint
+          $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
+        }
         $response = $this->getClient()->request('GET', $uri);
         if ($response->getStatusCode() === 200) {
           $result = $this->getResponseData($response);

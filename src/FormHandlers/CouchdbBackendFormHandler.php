@@ -24,7 +24,10 @@ class CouchdbBackendFormHandler extends AbstractBackendFormHandler {
    */
   public function resourceSchemaForm($machine_name, array &$form, array &$form_state, $op) {
     $configuration = $this->getConfiguration($form_state);
-    $form['endpoint'] = FormHelper::textField(t('Resource endpoint'), $configuration->getResourceEndpoint($machine_name));
+    $form['endpoint'] = FormHelper::textField(t('Resource endpoint'),
+      $configuration->getPluginSetting("resource_schema.$machine_name.endpoint"));
+    $form['all_docs_endpoint'] = FormHelper::textField(t('Resource _all_docs endpoint'),
+      $configuration->getPluginSetting("resource_schema.$machine_name.all_docs_endpoint"), FALSE);
   }
 
   /**
