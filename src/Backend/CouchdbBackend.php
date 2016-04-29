@@ -21,15 +21,47 @@ use GuzzleHttp\Client as GuzzleClient;
  */
 class CouchdbBackend extends AbstractBackend {
 
+  /**
+   * HTTP client.
+   *
+   * @var GuzzleHttp\Client
+   */
   protected $client;
+
+  /**
+   * Cookie jar that stores cookies.
+   *
+   * @var GuzzleHttp\Cookie\CookieJar
+   */
   protected $cookies;
+
+  /**
+   * Default find method limit.
+   *
+   * @var int
+   */
   protected $limit = 1000;
 
+  /**
+   * Set the HTTP client.
+   *
+   * @param GuzzleHttp\Client $client
+   *    The HTTP client.
+   *
+   * @return CouchdbBackend
+   *    Set client and return backend instance.
+   */
   public function setClient(GuzzleClient $client) {
     $this->client = $client;
     return $this;
   }
 
+  /**
+   * Get HTTP client.
+   *
+   * @return GuzzleHttp\Client
+   *    The HTTP client.
+   */
   public function getClient() {
     if (!$this->client) {
       $configuration = $this->getConfiguration();
