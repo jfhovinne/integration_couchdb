@@ -17,8 +17,6 @@ use GuzzleHttp\Client as GuzzleClient;
  *
  * Simple REST CouchDB backend using Guzzle.
  *
- * @method BackendConfiguration getConfiguration()
- *
  * @package Drupal\integration\Backend
  */
 class CouchdbBackend extends AbstractBackend {
