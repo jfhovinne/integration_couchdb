@@ -117,8 +117,8 @@ class CouchdbBackend extends AbstractBackend {
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
         $doc = new \stdClass();
-        $doc->_id = $data->id;
-        $doc->_rev = $data->rev;
+        $doc->_id = isset($data->id) ? $data->id : NULL;
+        $doc->_rev = isset($data->rev) ? $data->rev : NULL;
         return new Document($doc);
       } else {
         return FALSE;
@@ -168,8 +168,8 @@ class CouchdbBackend extends AbstractBackend {
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
         $doc = new \stdClass();
-        $doc->_id = $data->id;
-        $doc->_rev = $data->rev;
+        $doc->_id = isset($data->id) ? $data->id : NULL;
+        $doc->_rev = isset($data->rev) ? $data->rev : NULL;
         return new Document($doc);
       } else {
         return FALSE;
