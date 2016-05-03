@@ -282,6 +282,18 @@ class CouchdbBackend extends AbstractBackend {
     }
   }
 
+  public function getChanges($resource_schema) {
+    $uri = $this->getChangesUri($resource_schema);
+    try {
+      $response = $this->getClient()->request('GET', $uri);
+      if ($response->getStatusCode() === 200) {
+        return $this->getResponseData($response);
+      }
+    } catch (\GuzzleHttp\Exception\RequestException $e) {
+      return FALSE;
+    }
+  }
+
   /**
    * Get full, single resource URI.
    *
@@ -294,6 +306,22 @@ class CouchdbBackend extends AbstractBackend {
   protected function getResourceUri($resource_schema) {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
     $endpoint = $this->getConfiguration()->getResourceEndpoint($resource_schema);
+    return $base_url . $endpoint;
+  }
+
+  /**
+   * Get resource changes URI.
+   *
+   * @param string $resource_schema
+   *    Machine name of a resource schema configuration object.
+   *
+   * @return string
+   *    Resource changes URI.
+   */
+  protected function getChangesUri($resource_schema) {
+    $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
+    $endpoint = $this->getConfiguration()
+      ->getPluginSetting("resource_schema.$resource_schema.changes_endpoint");
     return $base_url . $endpoint;
   }
 
