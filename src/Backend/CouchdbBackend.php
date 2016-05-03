@@ -282,6 +282,15 @@ class CouchdbBackend extends AbstractBackend {
     }
   }
 
+  /**
+   * Get the list of changes.
+   *
+   * @param string $resource_schema
+   *    Machine name of a resource schema configuration object.
+   *
+   * @return \stdClass
+   *    Object containing the list of changes and the last change sequence number.
+   */
   public function getChanges($resource_schema) {
     $uri = $this->getChangesUri($resource_schema);
     try {
