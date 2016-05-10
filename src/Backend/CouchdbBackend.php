@@ -11,6 +11,7 @@ use Drupal\integration\Backend\AbstractBackend;
 use Drupal\integration\Document\Document;
 use Drupal\integration\Document\DocumentInterface;
 use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Psr7\Response;
 
 /**
  * Class CouchdbBackend.
@@ -103,7 +104,8 @@ class CouchdbBackend extends AbstractBackend {
     $out = [];
     if (isset($args['id']) && $this->read($resource_schema, $args['id'])) {
       $out = [$args['id']];
-    } else {
+    }
+    else {
       try {
         $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
         $endpoint = $this->getConfiguration()
@@ -306,7 +308,7 @@ class CouchdbBackend extends AbstractBackend {
    *    Machine name of a resource schema configuration object.
    *
    * @return \stdClass
-   *    Object containing the list of changes and the last change sequence number.
+   *    Object containing the list of changes and last change sequence number.
    */
   public function getChanges($resource_schema) {
     $uri = $this->getChangesUri($resource_schema);
@@ -361,7 +363,7 @@ class CouchdbBackend extends AbstractBackend {
    * @return mixed
    *    Decoded response body.
    */
-  protected function getResponseData(\GuzzleHttp\Psr7\Response $response) {
+  protected function getResponseData(Response $response) {
     $body = (string) $response->getBody();
     return $this->getFormatterHandler()->decode($body);
   }
