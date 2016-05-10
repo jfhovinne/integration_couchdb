@@ -46,10 +46,10 @@ class CookieAuthenticationFormHandler extends AbstractForm {
    */
   public function formSubmit(array $form, array &$form_state) {
     $configuration = $this->getConfiguration($form_state);
-    $input = $form_state['input']['authentication_handler_configuration'];
-    $configuration->setComponentSetting('authentication_handler', 'username', $input['username']);
-    $configuration->setComponentSetting('authentication_handler', 'password', $input['password']);
-    $configuration->setComponentSetting('authentication_handler', 'loginpath', $input['loginpath']);
+    $values = $form_state['values']['authentication_handler_configuration'];
+    $configuration->setComponentSetting('authentication_handler', 'username', $values['username']);
+    $configuration->setComponentSetting('authentication_handler', 'password', $values['password']);
+    $configuration->setComponentSetting('authentication_handler', 'loginpath', $values['loginpath']);
   }
 
   /**

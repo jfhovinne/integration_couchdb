@@ -32,7 +32,8 @@ function drush_integration_couchdb_test_connection($backend_name) {
   if ($backend->isAlive()) {
     drush_log(dt('The CouchDB backend at !url is alive.',
       ['!url' => $base_url]), 'success');
-  } else {
+  }
+  else {
     drush_log(dt('The CouchDB backend at !url could not be contacted.',
       ['!url' => $base_url]), 'error');
   }

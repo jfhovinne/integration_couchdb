@@ -72,17 +72,19 @@ class CouchdbBackend extends AbstractBackend {
           $username = $configuration->getComponentSetting('authentication_handler', 'username');
           $password = $configuration->getComponentSetting('authentication_handler', 'password');
           $headers['auth'] = ["$username", "$password"];
-        break;
+          break;
+
         case 'cookie_authentication':
           // Use cookie authentication, see CookieAuthentication class.
           $authentication = $this->getAuthenticationHandler();
           if ($authentication->authenticate()) {
             $context = $authentication->getContext();
             $this->cookies = $context['cookies'];
-          } else {
+          }
+          else {
             // @todo: Could not authenticate; handle this.
           }
-        break;
+          break;
       }
       $this->client = new GuzzleClient([
         'headers' => $headers,
@@ -107,22 +109,25 @@ class CouchdbBackend extends AbstractBackend {
         $endpoint = $this->getConfiguration()
           ->getPluginSetting("resource_schema.$resource_schema.all_docs_endpoint");
         if ($endpoint) {
-          // Custom endpoint
+          // Custom endpoint.
           $uri = $this->getConfiguration()->getPluginSetting('backend.base_url') . $endpoint;
-        } else {
-          // Default endpoint
+        }
+        else {
+          // Default endpoint.
           $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
         }
         $response = $this->getClient()->request('GET', $uri);
         if ($response->getStatusCode() === 200) {
           $result = $this->getResponseData($response);
-          foreach($result->rows as $item) {
+          foreach ($result->rows as $item) {
             $out[] = $item->id;
           }
-        } else {
+        }
+        else {
           // @todo: Handle this.
         }
-      } catch (\GuzzleHttp\Exception\RequestException $e) {
+      }
+      catch (\GuzzleHttp\Exception\RequestException $e) {
         // @todo: Handle this.
       }
     }
@@ -138,7 +143,7 @@ class CouchdbBackend extends AbstractBackend {
     $uri = $this->getResourceUri($resource_schema);
     $document->deleteMetadata('_id');
 
-    if ($id = $this->getBackendContentId($document)) {
+    if ($this->getBackendContentId($document)) {
       return $this->update($resource_schema, $document);
     }
 
@@ -152,11 +157,13 @@ class CouchdbBackend extends AbstractBackend {
         $doc->_id = isset($data->id) ? $data->id : NULL;
         $doc->_rev = isset($data->rev) ? $data->rev : NULL;
         return new Document($doc);
-      } else {
+      }
+      else {
         return FALSE;
       }
-    } catch (\GuzzleHttp\Exception\RequestException $e) {
-        return FALSE;
+    }
+    catch (\GuzzleHttp\Exception\RequestException $e) {
+      return FALSE;
     }
   }
 
@@ -171,10 +178,12 @@ class CouchdbBackend extends AbstractBackend {
       $response = $this->getClient()->request('GET', $uri);
       if ($response->getStatusCode() === 200) {
         return new Document($this->getResponseData($response));
-      } else {
+      }
+      else {
         return FALSE;
       }
-    } catch (\GuzzleHttp\Exception\RequestException $e) {
+    }
+    catch (\GuzzleHttp\Exception\RequestException $e) {
       return FALSE;
     }
   }
@@ -203,10 +212,12 @@ class CouchdbBackend extends AbstractBackend {
         $doc->_id = isset($data->id) ? $data->id : NULL;
         $doc->_rev = isset($data->rev) ? $data->rev : NULL;
         return new Document($doc);
-      } else {
+      }
+      else {
         return FALSE;
       }
-    } catch (\GuzzleHttp\Exception\RequestException $e) {
+    }
+    catch (\GuzzleHttp\Exception\RequestException $e) {
       return FALSE;
     }
   }
@@ -226,10 +237,12 @@ class CouchdbBackend extends AbstractBackend {
       $response = $this->getClient()->request('DELETE', $uri);
       if ($response->getStatusCode() === 200) {
         return TRUE;
-      } else {
+      }
+      else {
         return FALSE;
       }
-    } catch (\GuzzleHttp\Exception\RequestException $e) {
+    }
+    catch (\GuzzleHttp\Exception\RequestException $e) {
       return FALSE;
     }
   }
@@ -254,13 +267,16 @@ class CouchdbBackend extends AbstractBackend {
           // if more than 1 item?
           if (isset($result->rows[0])) {
             return $result->rows[0]->id;
-          } else {
+          }
+          else {
             return FALSE;
           }
-        } else {
+        }
+        else {
           return FALSE;
         }
-      } catch (\GuzzleHttp\Exception\RequestException $e) {
+      }
+      catch (\GuzzleHttp\Exception\RequestException $e) {
         return FALSE;
       }
     }
@@ -277,7 +293,8 @@ class CouchdbBackend extends AbstractBackend {
     try {
       $response = $this->getClient()->request('GET', $base_url);
       return $response->getStatusCode() === 200;
-    } catch (\GuzzleHttp\Exception\RequestException $e) {
+    }
+    catch (\GuzzleHttp\Exception\RequestException $e) {
       return FALSE;
     }
   }
@@ -298,7 +315,8 @@ class CouchdbBackend extends AbstractBackend {
       if ($response->getStatusCode() === 200) {
         return $this->getResponseData($response);
       }
-    } catch (\GuzzleHttp\Exception\RequestException $e) {
+    }
+    catch (\GuzzleHttp\Exception\RequestException $e) {
       return FALSE;
     }
   }
@@ -343,7 +361,7 @@ class CouchdbBackend extends AbstractBackend {
    * @return mixed
    *    Decoded response body.
    */
-  protected function getResponseData($response) {
+  protected function getResponseData(\GuzzleHttp\Psr7\Response $response) {
     $body = (string) $response->getBody();
     return $this->getFormatterHandler()->decode($body);
   }

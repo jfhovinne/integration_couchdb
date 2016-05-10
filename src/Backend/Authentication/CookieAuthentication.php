@@ -23,13 +23,15 @@ class CookieAuthentication extends AbstractAuthentication {
    */
   public function authenticate() {
     // We store the session cookie in the cache for future requests
-    // but need to make sure it has not expired, which is not checked by cache_get.
+    // but need to make sure it has not expired, which is not checked
+    // by cache_get.
     $cache_available = TRUE;
     if ($cache = cache_get('integration_couchdb_authentication', 'cache')) {
       if ($cache->expire < REQUEST_TIME) {
         $cache_available = FALSE;
       }
-    } else {
+    }
+    else {
       $cache_available = FALSE;
     }
     // The cookie is not available; do authentication.
@@ -46,8 +48,8 @@ class CookieAuthentication extends AbstractAuthentication {
 
       $client = new GuzzleClient([
         'headers' => [
-          'content-type' => 'application/x-www-form-urlencoded'
-        ]
+          'content-type' => 'application/x-www-form-urlencoded',
+        ],
       ]);
 
       try {
@@ -55,21 +57,25 @@ class CookieAuthentication extends AbstractAuthentication {
           'body' => "name=$username&password=$password",
           'cookies' => $cookies,
         ]);
-      } catch (\GuzzleHttp\Exception\RequestException $e) {
+      }
+      catch (\GuzzleHttp\Exception\RequestException $e) {
         return FALSE;
       }
 
-      // If correctly authentified, store the cookie and use a short expiration delay.
+      // If correctly authentified, store the cookie and
+      // use a short expiration delay.
       // @todo: the delay should be configurable.
       if ($response->getStatusCode() === 200) {
-        cache_set('integration_couchdb_authentication', $cookies, 'cache',  REQUEST_TIME + 600);
+        cache_set('integration_couchdb_authentication', $cookies, 'cache', REQUEST_TIME + 600);
         $context['cookies'] = $cookies;
         $this->setContext($context);
         return TRUE;
-      } else {
+      }
+      else {
         return FALSE;
       }
-    } else {
+    }
+    else {
       // Cookie is available in the cache, simply retrieve it.
       $context['cookies'] = $cache->data;
       $this->setContext($context);
