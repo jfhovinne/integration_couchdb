@@ -12,7 +12,7 @@ function integration_couchdb_drush_command() {
   $items = array();
   $items['integration-couchdb-test-connection'] = array(
     'description' => 'Test CouchDB backend connection.',
-    'aliases' => array('ict'),
+    'aliases' => array('ictc'),
     'arguments' => [
       'backend' => 'The backend machine name.',
     ],
@@ -28,11 +28,12 @@ function drush_integration_couchdb_test_connection($backend_name) {
     return drush_log(dt('Please specify a backend as an argument.'), 'error');
   }
   $backend = \Drupal\integration\Backend\BackendFactory::getInstance($backend_name);
+  $base_url = $backend->getConfiguration()->getPluginSetting('backend.base_url');
   if ($backend->isAlive()) {
     drush_log(dt('The CouchDB backend at !url is alive.',
-      ['!url' => $backend->getConfiguration()->getPluginSetting('backend.base_url')]), 'success');
+      ['!url' => $base_url]), 'success');
   } else {
     drush_log(dt('The CouchDB backend at !url could not be contacted.',
-      ['!url' => $backend->getConfiguration()->getPluginSetting('backend.base_url')]), 'error');
+      ['!url' => $base_url]), 'error');
   }
 }
