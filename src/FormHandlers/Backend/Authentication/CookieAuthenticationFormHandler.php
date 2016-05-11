@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains CookieAuthenticationFormHandler.
- */
-
 namespace Drupal\integration_couchdb\FormHandlers\Backend\Authentication;
 
 use Drupal\integration_ui\AbstractForm;

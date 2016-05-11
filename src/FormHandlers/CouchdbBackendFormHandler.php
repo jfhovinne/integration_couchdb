@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\integration_couchdb\FormHandlers\Backend\CouchdbBackendFormHandler.
- */
-
 namespace Drupal\integration_couchdb\FormHandlers\Backend;
 
 use Drupal\integration_ui\FormHandlers\Backend\AbstractBackendFormHandler;

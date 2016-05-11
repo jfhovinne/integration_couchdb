@@ -1,15 +1,11 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\integration_couchdb\Backend\Authentication\CookieAuthentication.
- */
-
 namespace Drupal\integration_couchdb\Backend\Authentication;
 
 use Drupal\integration\Backend\Authentication\AbstractAuthentication;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Cookie\CookieJar as CookieJar;
+use GuzzleHttp\Exception\RequestException;
 
 /**
  * Class CookieAuthentication.
@@ -58,7 +54,7 @@ class CookieAuthentication extends AbstractAuthentication {
           'cookies' => $cookies,
         ]);
       }
-      catch (\GuzzleHttp\Exception\RequestException $e) {
+      catch (RequestException $e) {
         return FALSE;
       }
 

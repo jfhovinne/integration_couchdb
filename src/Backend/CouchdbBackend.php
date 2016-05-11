@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\integration_couchdb\Backend\CouchdbBackend.
- */
-
 namespace Drupal\integration_couchdb\Backend;
 
 use Drupal\integration\Backend\AbstractBackend;
@@ -12,6 +7,7 @@ use Drupal\integration\Document\Document;
 use Drupal\integration\Document\DocumentInterface;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Exception\RequestException;
 
 /**
  * Class CouchdbBackend.
@@ -129,7 +125,7 @@ class CouchdbBackend extends AbstractBackend {
           // @todo: Handle this.
         }
       }
-      catch (\GuzzleHttp\Exception\RequestException $e) {
+      catch (RequestException $e) {
         // @todo: Handle this.
       }
     }
@@ -164,7 +160,7 @@ class CouchdbBackend extends AbstractBackend {
         return FALSE;
       }
     }
-    catch (\GuzzleHttp\Exception\RequestException $e) {
+    catch (RequestException $e) {
       return FALSE;
     }
   }
@@ -185,7 +181,7 @@ class CouchdbBackend extends AbstractBackend {
         return FALSE;
       }
     }
-    catch (\GuzzleHttp\Exception\RequestException $e) {
+    catch (RequestException $e) {
       return FALSE;
     }
   }
@@ -219,7 +215,7 @@ class CouchdbBackend extends AbstractBackend {
         return FALSE;
       }
     }
-    catch (\GuzzleHttp\Exception\RequestException $e) {
+    catch (RequestException $e) {
       return FALSE;
     }
   }
@@ -244,7 +240,7 @@ class CouchdbBackend extends AbstractBackend {
         return FALSE;
       }
     }
-    catch (\GuzzleHttp\Exception\RequestException $e) {
+    catch (RequestException $e) {
       return FALSE;
     }
   }
@@ -278,7 +274,7 @@ class CouchdbBackend extends AbstractBackend {
           return FALSE;
         }
       }
-      catch (\GuzzleHttp\Exception\RequestException $e) {
+      catch (RequestException $e) {
         return FALSE;
       }
     }
@@ -296,7 +292,7 @@ class CouchdbBackend extends AbstractBackend {
       $response = $this->getClient()->request('GET', $base_url);
       return $response->getStatusCode() === 200;
     }
-    catch (\GuzzleHttp\Exception\RequestException $e) {
+    catch (RequestException $e) {
       return FALSE;
     }
   }
@@ -318,7 +314,7 @@ class CouchdbBackend extends AbstractBackend {
         return $this->getResponseData($response);
       }
     }
-    catch (\GuzzleHttp\Exception\RequestException $e) {
+    catch (RequestException $e) {
       return FALSE;
     }
   }

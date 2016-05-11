@@ -5,6 +5,8 @@
  * Contains Drush-related hook implementations.
  */
 
+use Drupal\integration\Backend\BackendFactory;
+
 /**
  * Implements hook_drush_command().
  */
@@ -27,7 +29,7 @@ function drush_integration_couchdb_test_connection($backend_name) {
   if (!$backend_name) {
     return drush_log(dt('Please specify a backend as an argument.'), 'error');
   }
-  $backend = \Drupal\integration\Backend\BackendFactory::getInstance($backend_name);
+  $backend = BackendFactory::getInstance($backend_name);
   $base_url = $backend->getConfiguration()->getPluginSetting('backend.base_url');
   if ($backend->isAlive()) {
     drush_log(dt('The CouchDB backend at !url is alive.',
