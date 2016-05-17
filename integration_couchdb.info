@@ -6,4 +6,5 @@ package = Integration
 dependencies[] = integration
 dependencies[] = integration_ui
 dependencies[] = registry_autoload
+dependencies[] = composer_manager
 registry_autoload[] = PSR-4
