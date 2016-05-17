@@ -15,6 +15,7 @@ This module requires the following modules:
 
 * Integration and Integration UI (https://www.drupal.org/project/integration)
 * Registry Autoload (https://www.drupal.org/project/registry_autoload)
+* Guzzle HTTP Client (https://github.com/guzzle/guzzle)
 
 INSTALLATION
 ------------
@@ -22,6 +23,9 @@ INSTALLATION
 Install as you would normally install a contributed Drupal module. See:
 https://drupal.org/documentation/install/modules-themes/modules-7
 for further information.
+
+The Guzzle HTTP Client can be downloaded and installed using Composer Manager
+(https://www.drupal.org/project/composer_manager).
 
 CONFIGURATION
 -------------
