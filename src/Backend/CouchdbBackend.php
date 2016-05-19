@@ -330,7 +330,8 @@ class CouchdbBackend extends AbstractBackend {
    */
   protected function getResourceUri($resource_schema) {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
-    $endpoint = $this->getConfiguration()->getResourceEndpoint($resource_schema);
+    $endpoint = $this->getConfiguration()
+      ->getPluginSetting("resource_schema.$resource_schema.endpoint");
     return $base_url . $endpoint;
   }
 
