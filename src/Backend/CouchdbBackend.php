@@ -5,6 +5,15 @@ namespace Drupal\integration_couchdb\Backend;
 use Drupal\integration\Backend\AbstractBackend;
 use Drupal\integration\Document\Document;
 use Drupal\integration\Document\DocumentInterface;
+use Drupal\integration\Exceptions\FindException;
+use Drupal\integration\Exceptions\CreateException;
+use Drupal\integration\Exceptions\ReadException;
+use Drupal\integration\Exceptions\UpdateException;
+use Drupal\integration\Exceptions\DeleteException;
+use Drupal\integration\Exceptions\GetBackendContentIdException;
+use Drupal\integration\Exceptions\GetChangesException;
+use Drupal\integration\Exceptions\NotAuthenticatedException;
+use Drupal\integration\Exceptions\BadRequestException;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Exception\RequestException;
@@ -79,7 +88,7 @@ class CouchdbBackend extends AbstractBackend {
             $this->cookies = $context['cookies'];
           }
           else {
-            // @todo: Could not authenticate; handle this.
+            throw new NotAuthenticatedException();
           }
           break;
       }
@@ -114,7 +123,12 @@ class CouchdbBackend extends AbstractBackend {
           // Default endpoint.
           $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
         }
-        $response = $this->getClient()->request('GET', $uri);
+
+        // Active debug Mode
+        $params = [];
+        if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+        $response = $this->getClient()->request('GET', $uri, $params);
+
         if ($response->getStatusCode() === 200) {
           $result = $this->getResponseData($response);
           foreach ($result->rows as $item) {
@@ -122,11 +136,11 @@ class CouchdbBackend extends AbstractBackend {
           }
         }
         else {
-          // @todo: Handle this.
+          throw new BadRequestException($uri, $response);
         }
       }
       catch (RequestException $e) {
-        // @todo: Handle this.
+        throw new FindException($e->getMessage(), $e->getRequest(), $e->getResponse());
       }
     }
     return $out;
@@ -146,9 +160,12 @@ class CouchdbBackend extends AbstractBackend {
     }
 
     try {
-      $response = $this->getClient()->request('POST', $uri, [
+      $params = [
         'body' => $this->getFormatterHandler()->encode($document),
-      ]);
+      ];
+      // Active debug Mode
+      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      $response = $this->getClient()->request('POST', $uri, $params);
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
         $doc = new \stdClass();
@@ -157,11 +174,11 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        return FALSE;
+        throw new BadRequestException($uri, $response);
       }
     }
     catch (RequestException $e) {
-      return FALSE;
+      throw new CreateException($e->getMessage(), $e->getRequest(), $e->getResponse());
     }
   }
 
@@ -173,16 +190,19 @@ class CouchdbBackend extends AbstractBackend {
 
     try {
       $uri = $this->getResourceUri($resource_schema) . "/$id";
-      $response = $this->getClient()->request('GET', $uri);
+      $params = [];
+      // Active debug Mode
+      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      $response = $this->getClient()->request('GET', $uri, $params);
       if ($response->getStatusCode() === 200) {
         return new Document($this->getResponseData($response));
       }
       else {
-        return FALSE;
+        throw new BadRequestException($uri, $response);
       }
     }
     catch (RequestException $e) {
-      return FALSE;
+      throw new ReadException($e->getMessage(), $e->getRequest(), $e->getResponse());
     }
   }
 
@@ -201,9 +221,12 @@ class CouchdbBackend extends AbstractBackend {
     }
     $uri = $this->getResourceUri($resource_schema) . "/$id";
     try {
-      $response = $this->getClient()->request('PUT', $uri, [
+      $params = [
         'body' => $this->getFormatterHandler()->encode($document),
-      ]);
+      ];
+      // Active debug Mode
+      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      $response = $this->getClient()->request('PUT', $uri, $params);
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
         $doc = new \stdClass();
@@ -212,11 +235,11 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        return FALSE;
+        throw new BadRequestException($uri, $response);
       }
     }
     catch (RequestException $e) {
-      return FALSE;
+      throw new UpdateException($e->getMessage(), $e->getRequest(), $e->getResponse());
     }
   }
 
@@ -232,16 +255,19 @@ class CouchdbBackend extends AbstractBackend {
     try {
       $uri = $this->getResourceUri($resource_schema)
         . "/$id?rev=" . $doc->getMetaData('_rev');
-      $response = $this->getClient()->request('DELETE', $uri);
+      $params = [];
+      // Active debug Mode
+      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      $response = $this->getClient()->request('DELETE', $uri, $params);
       if ($response->getStatusCode() === 200) {
         return TRUE;
       }
       else {
-        return FALSE;
+        throw new BadRequestException($uri, $response);
       }
     }
     catch (RequestException $e) {
-      return FALSE;
+      throw new DeleteException($e->getMessage(), $e->getRequest(), $e->getResponse());
     }
   }
 
@@ -258,7 +284,10 @@ class CouchdbBackend extends AbstractBackend {
       $id_endpoint = $this->getConfiguration()->getPluginSetting('backend.id_endpoint');
       $uri = $base_url . $id_endpoint . '/' . $producer . '/' . $producer_content_id;
       try {
-        $response = $this->getClient()->request('GET', $uri);
+        $params = [];
+        // Active debug Mode
+        if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+        $response = $this->getClient()->request('GET', $uri, $params);
         if ($response->getStatusCode() === 200) {
           $result = $this->getResponseData($response);
           // @todo: Should we return the first or last item, or throw an exception
@@ -271,11 +300,11 @@ class CouchdbBackend extends AbstractBackend {
           }
         }
         else {
-          return FALSE;
+          throw new BadRequestException($uri, $response);
         }
       }
       catch (RequestException $e) {
-        return FALSE;
+        throw new GetBackendContentIdException($e->getMessage(), $e->getRequest(), $e->getResponse());
       }
     }
   }
@@ -289,11 +318,14 @@ class CouchdbBackend extends AbstractBackend {
   public function isAlive() {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
     try {
-      $response = $this->getClient()->request('GET', $base_url);
+      $params = [];
+      // Active debug Mode
+      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      $response = $this->getClient()->request('GET', $base_url, $params);
       return $response->getStatusCode() === 200;
     }
     catch (RequestException $e) {
-      return FALSE;
+      throw new isAliveException($e->getMessage(), $e->getRequest(), $e->getResponse());
     }
   }
 
@@ -309,13 +341,18 @@ class CouchdbBackend extends AbstractBackend {
   public function getChanges($resource_schema) {
     $uri = $this->getChangesUri($resource_schema);
     try {
-      $response = $this->getClient()->request('GET', $uri);
+      $params = [];
+      // Active debug Mode
+      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      $response = $this->getClient()->request('GET', $uri, $params);
       if ($response->getStatusCode() === 200) {
         return $this->getResponseData($response);
+      }else{
+        throw new BadRequestException($uri, $response);
       }
     }
     catch (RequestException $e) {
-      return FALSE;
+      throw new GetChangesException($e->getMessage(), $e->getRequest(), $e->getResponse());
     }
   }
 

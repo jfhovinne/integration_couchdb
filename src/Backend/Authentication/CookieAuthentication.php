@@ -55,7 +55,7 @@ class CookieAuthentication extends AbstractAuthentication {
         ]);
       }
       catch (RequestException $e) {
-        return FALSE;
+        throw new BackendException($e->getMessage(), $e->getRequest(), $e->getResponse());
       }
 
       // If correctly authentified, store the cookie and
