@@ -3,6 +3,7 @@
 namespace Drupal\integration_couchdb\Backend\Authentication;
 
 use Drupal\integration\Backend\Authentication\AbstractAuthentication;
+use Drupal\integration\Exceptions\BackendException;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Cookie\CookieJar as CookieJar;
 use GuzzleHttp\Exception\RequestException;
@@ -55,7 +56,7 @@ class CookieAuthentication extends AbstractAuthentication {
         ]);
       }
       catch (RequestException $e) {
-        throw new BackendException($e->getMessage(), $e->getRequest(), $e->getResponse());
+        throw new BackendException($e->getMessage());
       }
 
       // If correctly authentified, store the cookie and

@@ -5,15 +5,7 @@ namespace Drupal\integration_couchdb\Backend;
 use Drupal\integration\Backend\AbstractBackend;
 use Drupal\integration\Document\Document;
 use Drupal\integration\Document\DocumentInterface;
-use Drupal\integration\Exceptions\FindException;
-use Drupal\integration\Exceptions\CreateException;
-use Drupal\integration\Exceptions\ReadException;
-use Drupal\integration\Exceptions\UpdateException;
-use Drupal\integration\Exceptions\DeleteException;
-use Drupal\integration\Exceptions\GetBackendContentIdException;
-use Drupal\integration\Exceptions\GetChangesException;
-use Drupal\integration\Exceptions\NotAuthenticatedException;
-use Drupal\integration\Exceptions\BadRequestException;
+use Drupal\integration\Exceptions\BackendException;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Exception\RequestException;
@@ -88,7 +80,7 @@ class CouchdbBackend extends AbstractBackend {
             $this->cookies = $context['cookies'];
           }
           else {
-            throw new NotAuthenticatedException();
+            throw new BackendException();
           }
           break;
       }
@@ -126,7 +118,9 @@ class CouchdbBackend extends AbstractBackend {
 
         // Active debug Mode
         $params = [];
-        if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+        if (variable_get('integration_debug', FALSE)) {
+          $params['debug'] = true;
+        }
         $response = $this->getClient()->request('GET', $uri, $params);
 
         if ($response->getStatusCode() === 200) {
@@ -136,11 +130,11 @@ class CouchdbBackend extends AbstractBackend {
           }
         }
         else {
-          throw new BadRequestException($uri, $response);
+          throw new BackendException();
         }
       }
       catch (RequestException $e) {
-        throw new FindException($e->getMessage(), $e->getRequest(), $e->getResponse());
+        throw new BackendException($e->getMessage());
       }
     }
     return $out;
@@ -164,7 +158,9 @@ class CouchdbBackend extends AbstractBackend {
         'body' => $this->getFormatterHandler()->encode($document),
       ];
       // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      if (variable_get('integration_debug', FALSE)) {
+        $params['debug'] = true;
+      }
       $response = $this->getClient()->request('POST', $uri, $params);
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
@@ -174,11 +170,11 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        throw new BadRequestException($uri, $response);
+        throw new BackendException();
       }
     }
     catch (RequestException $e) {
-      throw new CreateException($e->getMessage(), $e->getRequest(), $e->getResponse());
+      throw new BackendException($e->getMessage());
     }
   }
 
@@ -192,17 +188,19 @@ class CouchdbBackend extends AbstractBackend {
       $uri = $this->getResourceUri($resource_schema) . "/$id";
       $params = [];
       // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      if (variable_get('integration_debug', FALSE)) {
+        $params['debug'] = true;
+      }
       $response = $this->getClient()->request('GET', $uri, $params);
       if ($response->getStatusCode() === 200) {
         return new Document($this->getResponseData($response));
       }
       else {
-        throw new BadRequestException($uri, $response);
+        throw new BackendException();
       }
     }
     catch (RequestException $e) {
-      throw new ReadException($e->getMessage(), $e->getRequest(), $e->getResponse());
+      throw new BackendException($e->getMessage());
     }
   }
 
@@ -225,7 +223,9 @@ class CouchdbBackend extends AbstractBackend {
         'body' => $this->getFormatterHandler()->encode($document),
       ];
       // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      if (variable_get('integration_debug', FALSE)) {
+        $params['debug'] = true;
+      }
       $response = $this->getClient()->request('PUT', $uri, $params);
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
@@ -235,11 +235,11 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        throw new BadRequestException($uri, $response);
+        throw new BackendException();
       }
     }
     catch (RequestException $e) {
-      throw new UpdateException($e->getMessage(), $e->getRequest(), $e->getResponse());
+      throw new BackendException($e->getMessage());
     }
   }
 
@@ -257,17 +257,19 @@ class CouchdbBackend extends AbstractBackend {
         . "/$id?rev=" . $doc->getMetaData('_rev');
       $params = [];
       // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      if (variable_get('integration_debug', FALSE)) {
+        $params['debug'] = true;
+      }
       $response = $this->getClient()->request('DELETE', $uri, $params);
       if ($response->getStatusCode() === 200) {
         return TRUE;
       }
       else {
-        throw new BadRequestException($uri, $response);
+        throw new BackendException();
       }
     }
     catch (RequestException $e) {
-      throw new DeleteException($e->getMessage(), $e->getRequest(), $e->getResponse());
+      throw new BackendException($e->getMessage());
     }
   }
 
@@ -286,7 +288,9 @@ class CouchdbBackend extends AbstractBackend {
       try {
         $params = [];
         // Active debug Mode
-        if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+        if (variable_get('integration_debug', FALSE)) {
+          $params['debug'] = true;
+        }
         $response = $this->getClient()->request('GET', $uri, $params);
         if ($response->getStatusCode() === 200) {
           $result = $this->getResponseData($response);
@@ -300,11 +304,11 @@ class CouchdbBackend extends AbstractBackend {
           }
         }
         else {
-          throw new BadRequestException($uri, $response);
+          throw new BackendException();
         }
       }
       catch (RequestException $e) {
-        throw new GetBackendContentIdException($e->getMessage(), $e->getRequest(), $e->getResponse());
+        throw new BackendException($e->getMessage());
       }
     }
   }
@@ -320,12 +324,14 @@ class CouchdbBackend extends AbstractBackend {
     try {
       $params = [];
       // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      if (variable_get('integration_debug', FALSE)) {
+        $params['debug'] = true;
+      }
       $response = $this->getClient()->request('GET', $base_url, $params);
       return $response->getStatusCode() === 200;
     }
     catch (RequestException $e) {
-      throw new isAliveException($e->getMessage(), $e->getRequest(), $e->getResponse());
+      throw new BackendException($e->getMessage());
     }
   }
 
@@ -343,16 +349,18 @@ class CouchdbBackend extends AbstractBackend {
     try {
       $params = [];
       // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) $params['debug'] = true;
+      if (variable_get('integration_debug', FALSE)) {
+        $params['debug'] = true;
+      }
       $response = $this->getClient()->request('GET', $uri, $params);
       if ($response->getStatusCode() === 200) {
         return $this->getResponseData($response);
       }else{
-        throw new BadRequestException($uri, $response);
+        throw new BackendException();
       }
     }
     catch (RequestException $e) {
-      throw new GetChangesException($e->getMessage(), $e->getRequest(), $e->getResponse());
+      throw new BackendException($e->getMessage());
     }
   }
 
