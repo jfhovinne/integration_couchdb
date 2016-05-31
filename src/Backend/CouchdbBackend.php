@@ -356,7 +356,7 @@ class CouchdbBackend extends AbstractBackend {
       if ($response->getStatusCode() === 200) {
         return $this->getResponseData($response);
       }else{
-        throw new BackendException();
+        throw new BackendException($this->getResponseData($response));
       }
     }
     catch (RequestException $e) {
