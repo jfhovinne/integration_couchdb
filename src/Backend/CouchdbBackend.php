@@ -81,15 +81,11 @@ class CouchdbBackend extends AbstractBackend {
               $this->cookies = $context['cookies'];
             }
             else {
-              throw new BackendException("Authentication Cookie ERROR");
+              throw new BackendException("Could not authenticate using Cookie Authentication.");
             }
           }
-          catch (RequestException $e) {
-            $message = $e->getMessage();
-            if ($e->hasResponse()) {
-              $message .= $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
-            }
-            throw new BackendException($message);
+          catch (BackendException $e) {
+            throw $e;
           }
           break;
       }
@@ -124,7 +120,7 @@ class CouchdbBackend extends AbstractBackend {
         $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
       }
 
-      $response = $this->getClient()->request('GET', $uri);
+      $response = $this->request('GET', $uri);
 
       if ($response->getStatusCode() === 200) {
         $result = $this->getResponseData($response);
@@ -133,7 +129,7 @@ class CouchdbBackend extends AbstractBackend {
         }
       }
       else {
-        $message = "Request FIND status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        $message = "Request find() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
         throw new BackendException($message);
       }
     }
@@ -165,7 +161,7 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        $message = "Request CREATE status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        $message = "Request create() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
         throw new BackendException($message);
       }
   }
@@ -182,7 +178,7 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($this->getResponseData($response));
       }
       else {
-        $message = "Request READ status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        $message = "Request read() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
         throw new BackendException($message);
       }
   }
@@ -214,7 +210,7 @@ class CouchdbBackend extends AbstractBackend {
       return new Document($doc);
     }
     else {
-      $message = "Request UPDATE status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+      $message = "Request update() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
       throw new BackendException($message);
     }
   }
@@ -237,7 +233,7 @@ class CouchdbBackend extends AbstractBackend {
       return TRUE;
     }
     else {
-      $message = "Request DELETE status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+      $message = "Request delete() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
       throw new BackendException($message);
     }
   }
@@ -255,7 +251,7 @@ class CouchdbBackend extends AbstractBackend {
       $id_endpoint = $this->getConfiguration()->getPluginSetting('backend.id_endpoint');
       $uri = $base_url . $id_endpoint . '/' . $producer . '/' . $producer_content_id;
 
-      $response = $this->getClient()->request('GET', $uri);
+      $response = $this->request('GET', $uri);
       if ($response->getStatusCode() === 200) {
         $result = $this->getResponseData($response);
         // @todo: Should we return the first or last item, or throw an exception
@@ -268,7 +264,7 @@ class CouchdbBackend extends AbstractBackend {
         }
       }
       else {
-        $message = "Request GETBACKENDCONTENTID status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        $message = "Request getBackendContentId() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
         throw new BackendException($message);
       }
     }
@@ -301,7 +297,8 @@ class CouchdbBackend extends AbstractBackend {
     $response = $this->request('GET', $uri);
     if ($response->getStatusCode() === 200) {
       return $this->getResponseData($response);
-    }else{
+    }
+    else {
       throw new BackendException($this->getResponseData($response));
     }
   }
@@ -353,7 +350,7 @@ class CouchdbBackend extends AbstractBackend {
   }
 
   /**
-   * Request with the debug option and catching the Request Exception.
+   * Encapsulate the client request method to handle debug mode and exceptions.
    *
    * @param String $method
    *    A request method.
@@ -365,18 +362,18 @@ class CouchdbBackend extends AbstractBackend {
    * @return GuzzleHttp\Psr7\Response
    *    A response returned by the request.
    */
-  protected function request($method, $uri = null, array $options = []) {
+  protected function request($method, $uri = NULL, array $options = []) {
     try {
-      // Active debug Mode
+      // Enable debug mode.
       if (variable_get('integration_couchdb_debug', FALSE)) {
         $options['debug'] = TRUE;
       }
       $response = $this->getClient()->request($method, $uri, $options);
     }
     catch (RequestException $e) {
-      $message = $e->getMessage();
+      $message = (!empty($e->getMessage())) ? $e->getMessage() : "";
       if ($e->hasResponse()) {
-        $message .= $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
+        $message .= " " . $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
       }
       throw new BackendException($message);
     }

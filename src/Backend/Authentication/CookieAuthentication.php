@@ -60,7 +60,11 @@ class CookieAuthentication extends AbstractAuthentication {
         $response = $client->request('POST', $base_url . $loginpath, $options);
       }
       catch (RequestException $e) {
-        throw $e;
+        $message = (!empty($e->getMessage())) ? $e->getMessage() : "";
+        if ($e->hasResponse()) {
+          $message .= " " . $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
+        }
+        throw new BackendException($message);
       }
 
       // If correctly authentified, store the cookie and
@@ -73,7 +77,7 @@ class CookieAuthentication extends AbstractAuthentication {
         return TRUE;
       }
       else {
-        $message = "Request AUTHENTICATE status error: ".$response->getStatusCode()." - ".$this->getResponseData($response);
+        $message = "Request authenticate() status error: ".$response->getStatusCode()." - ".$this->getResponseData($response);
         throw new BackendException($message);
       }
     }
@@ -83,6 +87,20 @@ class CookieAuthentication extends AbstractAuthentication {
       $this->setContext($context);
       return TRUE;
     }
+  }
+
+  /**
+   * Get response data, decoded by the formatter.
+   *
+   * @param GuzzleHttp\Psr7\Response $response
+   *    A response returned by a request.
+   *
+   * @return mixed
+   *    Decoded response body.
+   */
+  protected function getResponseData(Response $response) {
+    $body = (string) $response->getBody();
+    return $this->getFormatterHandler()->decode($body);
   }
 
 }
