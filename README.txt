@@ -60,5 +60,5 @@ DEBUG
 -------------
 Set the following value in your `settings.php` in order to get debug:
 ```php
-$conf['integration_debug'] = TRUE;
+$conf['integration_couchdb_debug'] = TRUE;
 ```

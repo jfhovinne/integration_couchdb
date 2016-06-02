@@ -50,13 +50,17 @@ class CookieAuthentication extends AbstractAuthentication {
       ]);
 
       try {
-        $response = $client->request('POST', $base_url . $loginpath, [
+        $options = [
           'body' => "name=$username&password=$password",
           'cookies' => $cookies,
-        ]);
+        ];
+        if (variable_get('integration_couchdb_debug', FALSE)) {
+          $options['debug'] = TRUE;
+        }
+        $response = $client->request('POST', $base_url . $loginpath, $options);
       }
       catch (RequestException $e) {
-        throw new BackendException($e->getMessage());
+        throw $e;
       }
 
       // If correctly authentified, store the cookie and
@@ -69,7 +73,8 @@ class CookieAuthentication extends AbstractAuthentication {
         return TRUE;
       }
       else {
-        return FALSE;
+        $message = "Request AUTHENTICATE status error: ".$response->getStatusCode()." - ".$this->getResponseData($response);
+        throw new BackendException($message);
       }
     }
     else {

@@ -75,12 +75,21 @@ class CouchdbBackend extends AbstractBackend {
         case 'cookie_authentication':
           // Use cookie authentication, see CookieAuthentication class.
           $authentication = $this->getAuthenticationHandler();
-          if ($authentication->authenticate()) {
-            $context = $authentication->getContext();
-            $this->cookies = $context['cookies'];
+          try {
+            if ($authentication->authenticate()) {
+              $context = $authentication->getContext();
+              $this->cookies = $context['cookies'];
+            }
+            else {
+              throw new BackendException("Authentication Cookie ERROR");
+            }
           }
-          else {
-            throw new BackendException();
+          catch (RequestException $e) {
+            $message = $e->getMessage();
+            if ($e->hasResponse()) {
+              $message .= $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
+            }
+            throw new BackendException($message);
           }
           break;
       }
@@ -103,38 +112,29 @@ class CouchdbBackend extends AbstractBackend {
       $out = [$args['id']];
     }
     else {
-      try {
-        $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
-        $endpoint = $this->getConfiguration()
-          ->getPluginSetting("resource_schema.$resource_schema.all_docs_endpoint");
-        if ($endpoint) {
-          // Custom endpoint.
-          $uri = $this->getConfiguration()->getPluginSetting('backend.base_url') . $endpoint;
-        }
-        else {
-          // Default endpoint.
-          $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
-        }
+      $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
+      $endpoint = $this->getConfiguration()
+        ->getPluginSetting("resource_schema.$resource_schema.all_docs_endpoint");
+      if ($endpoint) {
+        // Custom endpoint.
+        $uri = $this->getConfiguration()->getPluginSetting('backend.base_url') . $endpoint;
+      }
+      else {
+        // Default endpoint.
+        $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
+      }
 
-        // Active debug Mode
-        $params = [];
-        if (variable_get('integration_debug', FALSE)) {
-          $params['debug'] = true;
-        }
-        $response = $this->getClient()->request('GET', $uri, $params);
+      $response = $this->getClient()->request('GET', $uri);
 
-        if ($response->getStatusCode() === 200) {
-          $result = $this->getResponseData($response);
-          foreach ($result->rows as $item) {
-            $out[] = $item->id;
-          }
-        }
-        else {
-          throw new BackendException();
+      if ($response->getStatusCode() === 200) {
+        $result = $this->getResponseData($response);
+        foreach ($result->rows as $item) {
+          $out[] = $item->id;
         }
       }
-      catch (RequestException $e) {
-        throw new BackendException($e->getMessage());
+      else {
+        $message = "Request FIND status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
     }
     return $out;
@@ -153,15 +153,10 @@ class CouchdbBackend extends AbstractBackend {
       return $this->update($resource_schema, $document);
     }
 
-    try {
       $params = [
         'body' => $this->getFormatterHandler()->encode($document),
       ];
-      // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) {
-        $params['debug'] = true;
-      }
-      $response = $this->getClient()->request('POST', $uri, $params);
+      $response = $this->request('POST', $uri, $params);
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
         $doc = new \stdClass();
@@ -170,12 +165,9 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        throw new BackendException();
+        $message = "Request CREATE status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
-    }
-    catch (RequestException $e) {
-      throw new BackendException($e->getMessage());
-    }
   }
 
   /**
@@ -184,24 +176,15 @@ class CouchdbBackend extends AbstractBackend {
   public function read($resource_schema, $id) {
     $this->validateResourceSchema($resource_schema);
 
-    try {
       $uri = $this->getResourceUri($resource_schema) . "/$id";
-      $params = [];
-      // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) {
-        $params['debug'] = true;
-      }
-      $response = $this->getClient()->request('GET', $uri, $params);
+      $response = $this->request('GET', $uri);
       if ($response->getStatusCode() === 200) {
         return new Document($this->getResponseData($response));
       }
       else {
-        throw new BackendException();
+        $message = "Request READ status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
-    }
-    catch (RequestException $e) {
-      throw new BackendException($e->getMessage());
-    }
   }
 
   /**
@@ -218,28 +201,21 @@ class CouchdbBackend extends AbstractBackend {
       return FALSE;
     }
     $uri = $this->getResourceUri($resource_schema) . "/$id";
-    try {
-      $params = [
-        'body' => $this->getFormatterHandler()->encode($document),
-      ];
-      // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) {
-        $params['debug'] = true;
-      }
-      $response = $this->getClient()->request('PUT', $uri, $params);
-      if ($response->getStatusCode() === 201) {
-        $data = $this->getResponseData($response);
-        $doc = new \stdClass();
-        $doc->_id = isset($data->id) ? $data->id : NULL;
-        $doc->_rev = isset($data->rev) ? $data->rev : NULL;
-        return new Document($doc);
-      }
-      else {
-        throw new BackendException();
-      }
+    $params = [
+      'body' => $this->getFormatterHandler()->encode($document),
+    ];
+    $response = $this->request('PUT', $uri, $params);
+
+    if ($response->getStatusCode() === 201) {
+      $data = $this->getResponseData($response);
+      $doc = new \stdClass();
+      $doc->_id = isset($data->id) ? $data->id : NULL;
+      $doc->_rev = isset($data->rev) ? $data->rev : NULL;
+      return new Document($doc);
     }
-    catch (RequestException $e) {
-      throw new BackendException($e->getMessage());
+    else {
+      $message = "Request UPDATE status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+      throw new BackendException($message);
     }
   }
 
@@ -252,24 +228,17 @@ class CouchdbBackend extends AbstractBackend {
     if (!$doc = $this->read($resource_schema, $id)) {
       return FALSE;
     }
-    try {
-      $uri = $this->getResourceUri($resource_schema)
-        . "/$id?rev=" . $doc->getMetaData('_rev');
-      $params = [];
-      // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) {
-        $params['debug'] = true;
-      }
-      $response = $this->getClient()->request('DELETE', $uri, $params);
-      if ($response->getStatusCode() === 200) {
-        return TRUE;
-      }
-      else {
-        throw new BackendException();
-      }
+
+    $uri = $this->getResourceUri($resource_schema)
+      . "/$id?rev=" . $doc->getMetaData('_rev');
+
+    $response = $this->request('DELETE', $uri);
+    if ($response->getStatusCode() === 200) {
+      return TRUE;
     }
-    catch (RequestException $e) {
-      throw new BackendException($e->getMessage());
+    else {
+      $message = "Request DELETE status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+      throw new BackendException($message);
     }
   }
 
@@ -285,30 +254,22 @@ class CouchdbBackend extends AbstractBackend {
       // e.g. /getid/{producer}/{entity_id}
       $id_endpoint = $this->getConfiguration()->getPluginSetting('backend.id_endpoint');
       $uri = $base_url . $id_endpoint . '/' . $producer . '/' . $producer_content_id;
-      try {
-        $params = [];
-        // Active debug Mode
-        if (variable_get('integration_debug', FALSE)) {
-          $params['debug'] = true;
-        }
-        $response = $this->getClient()->request('GET', $uri, $params);
-        if ($response->getStatusCode() === 200) {
-          $result = $this->getResponseData($response);
-          // @todo: Should we return the first or last item, or throw an exception
-          // if more than 1 item?
-          if (isset($result->rows[0])) {
-            return $result->rows[0]->id;
-          }
-          else {
-            return FALSE;
-          }
+
+      $response = $this->getClient()->request('GET', $uri);
+      if ($response->getStatusCode() === 200) {
+        $result = $this->getResponseData($response);
+        // @todo: Should we return the first or last item, or throw an exception
+        // if more than 1 item?
+        if (isset($result->rows[0])) {
+          return $result->rows[0]->id;
         }
         else {
-          throw new BackendException();
+          return FALSE;
         }
       }
-      catch (RequestException $e) {
-        throw new BackendException($e->getMessage());
+      else {
+        $message = "Request GETBACKENDCONTENTID status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
     }
   }
@@ -321,18 +282,8 @@ class CouchdbBackend extends AbstractBackend {
    */
   public function isAlive() {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
-    try {
-      $params = [];
-      // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) {
-        $params['debug'] = true;
-      }
-      $response = $this->getClient()->request('GET', $base_url, $params);
-      return $response->getStatusCode() === 200;
-    }
-    catch (RequestException $e) {
-      throw new BackendException($e->getMessage());
-    }
+    $response = $this->request('GET', $base_url);
+    return $response->getStatusCode() === 200;
   }
 
   /**
@@ -346,21 +297,12 @@ class CouchdbBackend extends AbstractBackend {
    */
   public function getChanges($resource_schema) {
     $uri = $this->getChangesUri($resource_schema);
-    try {
-      $params = [];
-      // Active debug Mode
-      if (variable_get('integration_debug', FALSE)) {
-        $params['debug'] = true;
-      }
-      $response = $this->getClient()->request('GET', $uri, $params);
-      if ($response->getStatusCode() === 200) {
-        return $this->getResponseData($response);
-      }else{
-        throw new BackendException($this->getResponseData($response));
-      }
-    }
-    catch (RequestException $e) {
-      throw new BackendException($e->getMessage());
+
+    $response = $this->request('GET', $uri);
+    if ($response->getStatusCode() === 200) {
+      return $this->getResponseData($response);
+    }else{
+      throw new BackendException($this->getResponseData($response));
     }
   }
 
@@ -408,6 +350,37 @@ class CouchdbBackend extends AbstractBackend {
   protected function getResponseData(Response $response) {
     $body = (string) $response->getBody();
     return $this->getFormatterHandler()->decode($body);
+  }
+
+  /**
+   * Request with the debug option and catching the Request Exception.
+   *
+   * @param String $method
+   *    A request method.
+   * @param String $uri
+   *    A request URI.
+   * @param array $options
+   *    A request options.
+   *
+   * @return GuzzleHttp\Psr7\Response
+   *    A response returned by the request.
+   */
+  protected function request($method, $uri = null, array $options = []) {
+    try {
+      // Active debug Mode
+      if (variable_get('integration_couchdb_debug', FALSE)) {
+        $options['debug'] = TRUE;
+      }
+      $response = $this->getClient()->request($method, $uri, $options);
+    }
+    catch (RequestException $e) {
+      $message = $e->getMessage();
+      if ($e->hasResponse()) {
+        $message .= $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
+      }
+      throw new BackendException($message);
+    }
+    return $response;
   }
 
 }
