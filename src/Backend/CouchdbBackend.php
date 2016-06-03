@@ -373,7 +373,8 @@ class CouchdbBackend extends AbstractBackend {
     catch (RequestException $e) {
       $message = (!empty($e->getMessage())) ? $e->getMessage() : "";
       if ($e->hasResponse()) {
-        $message .= " " . $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
+        $message = 'HTTP ' . $e->getResponse()->getStatusCode();
+        $message .= "\n" . $e->getResponse()->getBody()->getContents();
       }
       throw new BackendException($message);
     }
