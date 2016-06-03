@@ -5,6 +5,7 @@ namespace Drupal\integration_couchdb\Backend;
 use Drupal\integration\Backend\AbstractBackend;
 use Drupal\integration\Document\Document;
 use Drupal\integration\Document\DocumentInterface;
+use Drupal\integration\Exceptions\BackendException;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Exception\RequestException;
@@ -74,12 +75,17 @@ class CouchdbBackend extends AbstractBackend {
         case 'cookie_authentication':
           // Use cookie authentication, see CookieAuthentication class.
           $authentication = $this->getAuthenticationHandler();
-          if ($authentication->authenticate()) {
-            $context = $authentication->getContext();
-            $this->cookies = $context['cookies'];
+          try {
+            if ($authentication->authenticate()) {
+              $context = $authentication->getContext();
+              $this->cookies = $context['cookies'];
+            }
+            else {
+              throw new BackendException("Could not authenticate using Cookie Authentication.");
+            }
           }
-          else {
-            // @todo: Could not authenticate; handle this.
+          catch (BackendException $e) {
+            throw $e;
           }
           break;
       }
@@ -102,31 +108,29 @@ class CouchdbBackend extends AbstractBackend {
       $out = [$args['id']];
     }
     else {
-      try {
-        $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
-        $endpoint = $this->getConfiguration()
-          ->getPluginSetting("resource_schema.$resource_schema.all_docs_endpoint");
-        if ($endpoint) {
-          // Custom endpoint.
-          $uri = $this->getConfiguration()->getPluginSetting('backend.base_url') . $endpoint;
-        }
-        else {
-          // Default endpoint.
-          $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
-        }
-        $response = $this->getClient()->request('GET', $uri);
-        if ($response->getStatusCode() === 200) {
-          $result = $this->getResponseData($response);
-          foreach ($result->rows as $item) {
-            $out[] = $item->id;
-          }
-        }
-        else {
-          // @todo: Handle this.
+      $limit = isset($args['limit']) ? (int) $args['limit'] : $this->limit;
+      $endpoint = $this->getConfiguration()
+        ->getPluginSetting("resource_schema.$resource_schema.all_docs_endpoint");
+      if ($endpoint) {
+        // Custom endpoint.
+        $uri = $this->getConfiguration()->getPluginSetting('backend.base_url') . $endpoint;
+      }
+      else {
+        // Default endpoint.
+        $uri = $this->getResourceUri($resource_schema) . "/_all_docs?limit=$limit";
+      }
+
+      $response = $this->request('GET', $uri);
+
+      if ($response->getStatusCode() === 200) {
+        $result = $this->getResponseData($response);
+        foreach ($result->rows as $item) {
+          $out[] = $item->id;
         }
       }
-      catch (RequestException $e) {
-        // @todo: Handle this.
+      else {
+        $message = "Request find() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
     }
     return $out;
@@ -145,10 +149,10 @@ class CouchdbBackend extends AbstractBackend {
       return $this->update($resource_schema, $document);
     }
 
-    try {
-      $response = $this->getClient()->request('POST', $uri, [
+      $params = [
         'body' => $this->getFormatterHandler()->encode($document),
-      ]);
+      ];
+      $response = $this->request('POST', $uri, $params);
       if ($response->getStatusCode() === 201) {
         $data = $this->getResponseData($response);
         $doc = new \stdClass();
@@ -157,12 +161,9 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        return FALSE;
+        $message = "Request create() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
-    }
-    catch (RequestException $e) {
-      return FALSE;
-    }
   }
 
   /**
@@ -171,19 +172,15 @@ class CouchdbBackend extends AbstractBackend {
   public function read($resource_schema, $id) {
     $this->validateResourceSchema($resource_schema);
 
-    try {
       $uri = $this->getResourceUri($resource_schema) . "/$id";
-      $response = $this->getClient()->request('GET', $uri);
+      $response = $this->request('GET', $uri);
       if ($response->getStatusCode() === 200) {
         return new Document($this->getResponseData($response));
       }
       else {
-        return FALSE;
+        $message = "Request read() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
-    }
-    catch (RequestException $e) {
-      return FALSE;
-    }
   }
 
   /**
@@ -200,23 +197,21 @@ class CouchdbBackend extends AbstractBackend {
       return FALSE;
     }
     $uri = $this->getResourceUri($resource_schema) . "/$id";
-    try {
-      $response = $this->getClient()->request('PUT', $uri, [
-        'body' => $this->getFormatterHandler()->encode($document),
-      ]);
-      if ($response->getStatusCode() === 201) {
-        $data = $this->getResponseData($response);
-        $doc = new \stdClass();
-        $doc->_id = isset($data->id) ? $data->id : NULL;
-        $doc->_rev = isset($data->rev) ? $data->rev : NULL;
-        return new Document($doc);
-      }
-      else {
-        return FALSE;
-      }
+    $params = [
+      'body' => $this->getFormatterHandler()->encode($document),
+    ];
+    $response = $this->request('PUT', $uri, $params);
+
+    if ($response->getStatusCode() === 201) {
+      $data = $this->getResponseData($response);
+      $doc = new \stdClass();
+      $doc->_id = isset($data->id) ? $data->id : NULL;
+      $doc->_rev = isset($data->rev) ? $data->rev : NULL;
+      return new Document($doc);
     }
-    catch (RequestException $e) {
-      return FALSE;
+    else {
+      $message = "Request update() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+      throw new BackendException($message);
     }
   }
 
@@ -229,19 +224,17 @@ class CouchdbBackend extends AbstractBackend {
     if (!$doc = $this->read($resource_schema, $id)) {
       return FALSE;
     }
-    try {
-      $uri = $this->getResourceUri($resource_schema)
-        . "/$id?rev=" . $doc->getMetaData('_rev');
-      $response = $this->getClient()->request('DELETE', $uri);
-      if ($response->getStatusCode() === 200) {
-        return TRUE;
-      }
-      else {
-        return FALSE;
-      }
+
+    $uri = $this->getResourceUri($resource_schema)
+      . "/$id?rev=" . $doc->getMetaData('_rev');
+
+    $response = $this->request('DELETE', $uri);
+    if ($response->getStatusCode() === 200) {
+      return TRUE;
     }
-    catch (RequestException $e) {
-      return FALSE;
+    else {
+      $message = "Request delete() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+      throw new BackendException($message);
     }
   }
 
@@ -257,25 +250,22 @@ class CouchdbBackend extends AbstractBackend {
       // e.g. /getid/{producer}/{entity_id}
       $id_endpoint = $this->getConfiguration()->getPluginSetting('backend.id_endpoint');
       $uri = $base_url . $id_endpoint . '/' . $producer . '/' . $producer_content_id;
-      try {
-        $response = $this->getClient()->request('GET', $uri);
-        if ($response->getStatusCode() === 200) {
-          $result = $this->getResponseData($response);
-          // @todo: Should we return the first or last item, or throw an exception
-          // if more than 1 item?
-          if (isset($result->rows[0])) {
-            return $result->rows[0]->id;
-          }
-          else {
-            return FALSE;
-          }
+
+      $response = $this->request('GET', $uri);
+      if ($response->getStatusCode() === 200) {
+        $result = $this->getResponseData($response);
+        // @todo: Should we return the first or last item, or throw an exception
+        // if more than 1 item?
+        if (isset($result->rows[0])) {
+          return $result->rows[0]->id;
         }
         else {
           return FALSE;
         }
       }
-      catch (RequestException $e) {
-        return FALSE;
+      else {
+        $message = "Request getBackendContentId() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
+        throw new BackendException($message);
       }
     }
   }
@@ -288,13 +278,8 @@ class CouchdbBackend extends AbstractBackend {
    */
   public function isAlive() {
     $base_url = $this->getConfiguration()->getPluginSetting('backend.base_url');
-    try {
-      $response = $this->getClient()->request('GET', $base_url);
-      return $response->getStatusCode() === 200;
-    }
-    catch (RequestException $e) {
-      return FALSE;
-    }
+    $response = $this->request('GET', $base_url);
+    return $response->getStatusCode() === 200;
   }
 
   /**
@@ -308,14 +293,13 @@ class CouchdbBackend extends AbstractBackend {
    */
   public function getChanges($resource_schema) {
     $uri = $this->getChangesUri($resource_schema);
-    try {
-      $response = $this->getClient()->request('GET', $uri);
-      if ($response->getStatusCode() === 200) {
-        return $this->getResponseData($response);
-      }
+
+    $response = $this->request('GET', $uri);
+    if ($response->getStatusCode() === 200) {
+      return $this->getResponseData($response);
     }
-    catch (RequestException $e) {
-      return FALSE;
+    else {
+      throw new BackendException($this->getResponseData($response));
     }
   }
 
@@ -363,6 +347,37 @@ class CouchdbBackend extends AbstractBackend {
   protected function getResponseData(Response $response) {
     $body = (string) $response->getBody();
     return $this->getFormatterHandler()->decode($body);
+  }
+
+  /**
+   * Encapsulate the client request method to handle debug mode and exceptions.
+   *
+   * @param String $method
+   *    A request method.
+   * @param String $uri
+   *    A request URI.
+   * @param array $options
+   *    A request options.
+   *
+   * @return GuzzleHttp\Psr7\Response
+   *    A response returned by the request.
+   */
+  protected function request($method, $uri = NULL, array $options = []) {
+    try {
+      // Enable debug mode.
+      if (variable_get('integration_couchdb_debug', FALSE)) {
+        $options['debug'] = TRUE;
+      }
+      $response = $this->getClient()->request($method, $uri, $options);
+    }
+    catch (RequestException $e) {
+      $message = (!empty($e->getMessage())) ? $e->getMessage() : "";
+      if ($e->hasResponse()) {
+        $message .= " " . $e->getResponse()->getStatusCode() . " - " . $this->getResponseData($e->getResponse());
+      }
+      throw new BackendException($message);
+    }
+    return $response;
   }
 
 }

@@ -55,3 +55,10 @@ for this resource, e.g. /articles/changes
 Basic HTTP authentication and Cookie authentication are supported.
 The login path is required for the Cookie authentication only,
 enter its URI, e.g. /_session
+
+DEBUG
+-------------
+Set the following value in your `settings.php` in order to get debug:
+```php
+$conf['integration_couchdb_debug'] = TRUE;
+```
