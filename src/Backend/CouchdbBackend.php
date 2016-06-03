@@ -81,8 +81,11 @@ class CouchdbBackend extends AbstractBackend {
               $this->cookies = $context['cookies'];
             }
             else {
-              throw new BackendException("Could not authenticate using Cookie Authentication.");
+              throw new BackendException("Could not authenticate.");
             }
+          }
+          catch (RequestException $e) {
+            throw new BackendException($this->getErrorMessage($e));
           }
           catch (BackendException $e) {
             throw $e;
@@ -129,8 +132,7 @@ class CouchdbBackend extends AbstractBackend {
         }
       }
       else {
-        $message = "Request find() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
-        throw new BackendException($message);
+        throw new BackendException($this->getErrorMessage($e));
       }
     }
     return $out;
@@ -161,8 +163,7 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($doc);
       }
       else {
-        $message = "Request create() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
-        throw new BackendException($message);
+        throw new BackendException($this->getErrorMessage($e));
       }
   }
 
@@ -178,8 +179,7 @@ class CouchdbBackend extends AbstractBackend {
         return new Document($this->getResponseData($response));
       }
       else {
-        $message = "Request read() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
-        throw new BackendException($message);
+        throw new BackendException($this->getErrorMessage($e));
       }
   }
 
@@ -210,8 +210,7 @@ class CouchdbBackend extends AbstractBackend {
       return new Document($doc);
     }
     else {
-      $message = "Request update() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
-      throw new BackendException($message);
+      throw new BackendException($this->getErrorMessage($e));
     }
   }
 
@@ -233,8 +232,7 @@ class CouchdbBackend extends AbstractBackend {
       return TRUE;
     }
     else {
-      $message = "Request delete() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
-      throw new BackendException($message);
+      throw new BackendException($this->getErrorMessage($e));
     }
   }
 
@@ -264,8 +262,7 @@ class CouchdbBackend extends AbstractBackend {
         }
       }
       else {
-        $message = "Request getBackendContentId() status error: " . $response->getStatusCode() . " - " . $this->getResponseData($response);
-        throw new BackendException($message);
+        throw new BackendException($this->getErrorMessage($e));
       }
     }
   }
@@ -350,6 +347,24 @@ class CouchdbBackend extends AbstractBackend {
   }
 
   /**
+   * Get response error message.
+   *
+   * @param GuzzleHttp\Exception\RequestException $e
+   *    A request exception.
+   *
+   * @return string
+   *    Beautiful error message.
+   */
+  protected function getErrorMessage(RequestException $e) {
+    $message = !empty($e->getMessage()) ? $e->getMessage() : '';
+    if ($e->hasResponse()) {
+      $message = 'HTTP ' . $e->getResponse()->getStatusCode();
+      $message .= "\n" . $e->getResponse()->getBody()->getContents();
+    }
+    return $message;
+  }
+
+  /**
    * Encapsulate the client request method to handle debug mode and exceptions.
    *
    * @param String $method
@@ -371,12 +386,7 @@ class CouchdbBackend extends AbstractBackend {
       $response = $this->getClient()->request($method, $uri, $options);
     }
     catch (RequestException $e) {
-      $message = (!empty($e->getMessage())) ? $e->getMessage() : "";
-      if ($e->hasResponse()) {
-        $message = 'HTTP ' . $e->getResponse()->getStatusCode();
-        $message .= "\n" . $e->getResponse()->getBody()->getContents();
-      }
-      throw new BackendException($message);
+      throw new BackendException($this->getErrorMessage($e));
     }
     return $response;
   }
