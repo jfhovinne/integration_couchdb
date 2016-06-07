@@ -66,10 +66,7 @@ class CouchdbBackend extends AbstractBackend {
       $headers = ['Content-Type' => $this->getFormatterHandler()->getContentType()];
       switch ($configuration->authentication) {
         case 'http_authentication':
-          // Use basic auth and add username/password in the request headers.
-          $username = $configuration->getComponentSetting('authentication_handler', 'username');
-          $password = $configuration->getComponentSetting('authentication_handler', 'password');
-          $headers['auth'] = ["$username", "$password"];
+          // This authentication method must be handled during the request.
           break;
 
         case 'cookie_authentication':
@@ -382,6 +379,13 @@ class CouchdbBackend extends AbstractBackend {
       // Enable debug mode.
       if (variable_get('integration_couchdb_debug', FALSE)) {
         $options['debug'] = TRUE;
+      }
+      // Handle basic authentication, which must be added to the request headers.
+      $configuration = $this->getConfiguration();
+      if ($configuration->authentication === 'http_authentication') {
+        $username = $configuration->getComponentSetting('authentication_handler', 'username');
+        $password = $configuration->getComponentSetting('authentication_handler', 'password');
+        $options['auth'] = [$username, $password];
       }
       $response = $this->getClient()->request($method, $uri, $options);
     }
